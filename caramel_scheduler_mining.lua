@@ -1531,7 +1531,7 @@ local function GetSellSlots()
 	for Index, Slot in Account.inventory do
 		local Data = ItemUtilities.getItemData(Slot.itemId)
 
-		if not ItemUtilities.canSellItem(Data) or Data.type == "tool" or Data.type == "seeds" then
+		if not ItemUtilities.canSellItem(Data) or Data.type == "tool" then
 			continue
 		end
 
@@ -1539,7 +1539,7 @@ local function GetSellSlots()
 			continue
 		end
 
-		local Category = Data.type == "crop" and "Crops" or Data.type == "fish" and "Fish" or Data.type == "material" and "Materials"
+		local Category = Data.type == "crop" and "Crops" or Data.type == "fish" and "Fish" or Data.type == "material" and "Materials" or Data.type == "seeds" and "Seeds" or "Furniture"
 
 		if not Category or not (Cycle.SellOverride or Options.SellCategories.Value)[Category] or Totals[Slot.itemId] - Slot.quantity < Options.KeepItems.Value then
 			continue
@@ -2360,7 +2360,7 @@ function Cycle.AutoCycle(Generation)
 				Cycle.NextHarvestAt = os.clock() + Options.HarvestInterval.Value * 60
 			elseif Now >= Cycle.NextSellAt or (Cycle.GetUsedSlots() >= Options.SellSlots.Value and Now >= Cycle.ThresholdRetryAt) then
 				Cycle.Status = "Priority 2: selling"
-				Cycle.SellOverride = {Crops = true, Fish = true}
+				Cycle.SellOverride = {Crops = true, Fish = true, Furniture = Toggles.CycleSellFurniture.Value, Seeds = Toggles.CycleSellSeeds.Value}
 				SellItems(Active)
 				Cycle.SellOverride = nil
 				Cycle.NextSellAt = os.clock() + Options.SellInterval.Value * 60
@@ -2690,6 +2690,26 @@ UI.CycleGroup = Tabs.Farm:AddGroupbox({
 	IconName = "clock",
 })
 
+UI.CycleGroup:AddToggle("CycleSellFurniture", {
+	Text = "Also sell furniture/other items",
+	Default = true,
+})
+
+UI.CycleGroup:AddToggle("CycleSellSeeds", {
+	Text = "Also sell seeds (respects Keep items)",
+	Default = true,
+})
+
+UI.CycleGroup:AddButton({
+	Text = "Print inventory item types (F9)",
+	Func = function()
+		for _, Slot in PlayerSelectors.getLocalAccount().inventory do
+			local Data = ItemUtilities.getItemData(Slot.itemId)
+			print(`{Slot.itemId} | type={Data and Data.type} | sellable={Data and ItemUtilities.canSellItem(Data)}`)
+		end
+	end,
+})
+
 UI.CycleGroup:AddToggle("AutoCycle", {
 	Text = "Auto scheduler",
 	Default = false,
@@ -2794,10 +2814,10 @@ UI.SaleGroup:AddToggle("AutoSell", {
 })
 
 UI.SaleGroup:AddDropdown("SellCategories", {
-	Values = {"Crops", "Fish", "Materials"},
+	Values = {"Crops", "Fish", "Materials", "Seeds", "Furniture"},
 	Default = {"Crops"},
 	Multi = true,
-	Text = "Sell categories",
+	Text = "Sell categories (Furniture = other sellable items)",
 })
 
 UI.SaleGroup:AddToggle("KeepRare", {
